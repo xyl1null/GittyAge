@@ -166,6 +166,39 @@
       word-break: break-word;
     }
 
+    .age-value {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 100%;
+      min-height: 28px;
+    }
+
+    .age-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--muted);
+    }
+
+    .age-toggle:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .age-toggle svg {
+      width: 15px;
+      height: 15px;
+      stroke: currentColor;
+    }
+
     .status {
       min-height: 1.25em;
       margin: 14px 0 0;
@@ -244,7 +277,19 @@
         <dt id="label-created-at">Created at</dt>
         <dd id="result-created-at">-</dd>
         <dt id="label-age">Account age</dt>
-        <dd id="result-age">-</dd>
+        <dd>
+          <span class="age-value">
+            <span id="result-age">-</span>
+            <button id="age-toggle" class="age-toggle hidden" type="button" aria-label="Show account age in years" title="Show account age in years">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 1l4 4-4 4"></path>
+                <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                <path d="M7 23l-4-4 4-4"></path>
+                <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+              </svg>
+            </button>
+          </span>
+        </dd>
       </dl>
       <div id="status" class="status"></div>
       <div id="hint" class="hint">Public GitHub data only. No token is used in this page.</div>
@@ -279,10 +324,13 @@
         userNotFound: ({ username }) => `User not found: ${username}`,
         rateLimited: ({ message, resetTime }) => {
           const resetText = resetTime ? ` Try again after ${resetTime}.` : "";
-          return `${message || "GitHub rejected the request."}${resetText}`;
+          return `${message || "GitHub rejected the request."}${resetText} If you are using a proxy or VPN, turn it off or switch networks and try again.`;
         },
         genericError: ({ message }) => message || "Unable to reach GitHub.",
         age: ({ days, hours, minutes }) => `${days} days, ${hours} hours, ${minutes} minutes`,
+        ageYears: ({ years }) => `about ${years} years`,
+        showYearsLabel: "Show account age in years",
+        showDaysLabel: "Show account age in days",
       },
       zh: {
         htmlLang: "zh-CN",
@@ -308,10 +356,13 @@
         userNotFound: ({ username }) => `未找到用户：${username}`,
         rateLimited: ({ message, resetTime }) => {
           const resetText = resetTime ? ` 请在 ${resetTime} 后重试。` : "";
-          return `GitHub 拒绝了请求：${message || "可能是请求频率限制。"}${resetText}`;
+          return `GitHub 拒绝了请求：${message || "可能是请求频率限制。"}${resetText} 如果你正在使用代理或 VPN，请关闭代理或切换网络后再试。`;
         },
         genericError: ({ message }) => message || "无法连接 GitHub。",
         age: ({ days, hours, minutes }) => `${days} 天 ${hours} 小时 ${minutes} 分钟`,
+        ageYears: ({ years }) => `约 ${years} 年`,
+        showYearsLabel: "以年显示账号年龄",
+        showDaysLabel: "以天显示账号年龄",
       },
     };
 
@@ -329,12 +380,14 @@
     const resultLogin = document.getElementById("result-login");
     const resultCreatedAt = document.getElementById("result-created-at");
     const resultAge = document.getElementById("result-age");
+    const ageToggle = document.getElementById("age-toggle");
     const status = document.getElementById("status");
     const hint = document.getElementById("hint");
 
     let currentLanguage = getInitialLanguage();
     let isBusy = false;
     let lastCreatedAt = "";
+    let ageDisplayMode = "days";
     let lastStatus = null;
 
     function getCopy() {
@@ -403,6 +456,17 @@
       return getCopy().age({ days, hours, minutes });
     }
 
+    function formatAgeYears(createdAt) {
+      const created = new Date(createdAt);
+      const diff = Math.max(0, Date.now() - created.getTime());
+      const years = diff / (365.2425 * 24 * 60 * 60 * 1000);
+      const formattedYears = new Intl.NumberFormat(getCopy().locale, {
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 2,
+      }).format(years);
+      return getCopy().ageYears({ years: formattedYears });
+    }
+
     function formatCreatedAt(createdAt) {
       return new Intl.DateTimeFormat(getCopy().locale, {
         dateStyle: "medium",
@@ -447,9 +511,29 @@
 
       if (lastCreatedAt) {
         resultCreatedAt.textContent = formatCreatedAt(lastCreatedAt);
-        resultAge.textContent = formatAge(lastCreatedAt);
       }
+      renderAge();
       renderStatus();
+    }
+
+    function renderAge() {
+      if (!lastCreatedAt) {
+        resultAge.textContent = "-";
+        ageToggle.classList.add("hidden");
+        return;
+      }
+
+      const copy = getCopy();
+      resultAge.textContent = ageDisplayMode === "years"
+        ? formatAgeYears(lastCreatedAt)
+        : formatAge(lastCreatedAt);
+
+      const label = ageDisplayMode === "years"
+        ? copy.showDaysLabel
+        : copy.showYearsLabel;
+      ageToggle.title = label;
+      ageToggle.setAttribute("aria-label", label);
+      ageToggle.classList.remove("hidden");
     }
 
     async function fetchUser(username) {
@@ -503,15 +587,16 @@
         }
 
         lastCreatedAt = createdAt;
+        ageDisplayMode = "days";
         resultLogin.textContent = user.login || username;
         resultCreatedAt.textContent = formatCreatedAt(createdAt);
-        resultAge.textContent = formatAge(createdAt);
+        renderAge();
         setLocalizedStatus("loaded", "success");
       } catch (error) {
         lastCreatedAt = "";
         resultLogin.textContent = "-";
         resultCreatedAt.textContent = "-";
-        resultAge.textContent = "-";
+        renderAge();
 
         if (error.status === 404) {
           setLocalizedStatus("userNotFound", "error", { username });
@@ -530,6 +615,11 @@
       currentLanguage = currentLanguage === "en" ? "zh" : "en";
       saveLanguage(currentLanguage);
       applyLanguage();
+    });
+
+    ageToggle.addEventListener("click", () => {
+      ageDisplayMode = ageDisplayMode === "days" ? "years" : "days";
+      renderAge();
     });
 
     applyLanguage();

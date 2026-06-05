@@ -8,7 +8,9 @@ Open `index.html` through GitHub Pages. The page calls GitHub's public REST API 
 
 The page supports English and Chinese. Use the globe button in the top-right corner to switch languages.
 
-Unauthenticated browser requests share GitHub's public API rate limit for the source IP. If that limit is exhausted, wait for the reset time shown by the page.
+The account age result defaults to days. Use the small trailing conversion icon to switch it to approximate years.
+
+Unauthenticated browser requests share GitHub's public API rate limit for the source IP. If that limit is exhausted, wait for the reset time shown by the page. If you are using a proxy or VPN, turn it off or switch networks and try again.
 
 ## CLI
 
