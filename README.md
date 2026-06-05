@@ -6,6 +6,8 @@ Check when a GitHub account was created.
 
 Open `index.html` through GitHub Pages. The page calls GitHub's public REST API from the browser and does not use or store a token.
 
+The page supports English and Chinese. Use the globe button in the top-right corner to switch languages.
+
 Unauthenticated browser requests share GitHub's public API rate limit for the source IP. If that limit is exhausted, wait for the reset time shown by the page.
 
 ## CLI

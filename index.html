@@ -47,6 +47,17 @@
       color: var(--muted);
     }
 
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .intro {
+      min-width: 0;
+    }
+
     form {
       display: flex;
       flex-wrap: wrap;
@@ -93,6 +104,37 @@
       font: inherit;
       font-weight: 600;
       cursor: pointer;
+    }
+
+    .language-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-width: 58px;
+      height: 40px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      flex: 0 0 auto;
+    }
+
+    .language-button svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+    }
+
+    .language-code {
+      font-size: 0.86rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .language-button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
     }
 
     button:disabled {
@@ -157,6 +199,10 @@
         font-size: 1.6rem;
       }
 
+      .topbar {
+        align-items: center;
+      }
+
       dl {
         grid-template-columns: 1fr;
         gap: 4px 0;
@@ -170,8 +216,20 @@
 </head>
 <body>
   <main>
-    <h1>GitHub Account Age Checker</h1>
-    <p>Look up a GitHub user and see when the account was created.</p>
+    <div class="topbar">
+      <div class="intro">
+        <h1 id="page-title">GitHub Account Age Checker</h1>
+        <p id="page-description">Look up a GitHub user and see when the account was created.</p>
+      </div>
+      <button id="language-button" class="language-button" type="button" aria-label="Switch to Chinese" title="Switch to Chinese">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M2 12h20"></path>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg>
+        <span id="language-code" class="language-code">中</span>
+      </button>
+    </div>
 
     <form id="lookup-form" autocomplete="off">
       <label for="username">GitHub username</label>
@@ -181,38 +239,158 @@
 
     <section id="result" class="hidden" aria-live="polite">
       <dl>
-        <dt>Username</dt>
+        <dt id="label-login">Username</dt>
         <dd id="result-login">-</dd>
-        <dt>Created at</dt>
+        <dt id="label-created-at">Created at</dt>
         <dd id="result-created-at">-</dd>
-        <dt>Account age</dt>
+        <dt id="label-age">Account age</dt>
         <dd id="result-age">-</dd>
       </dl>
       <div id="status" class="status"></div>
-      <div class="hint">Public GitHub data only. No token is used in this page.</div>
+      <div id="hint" class="hint">Public GitHub data only. No token is used in this page.</div>
     </section>
   </main>
 
   <script>
     const API_VERSION = "2022-11-28";
+    const LANGUAGE_STORAGE_KEY = "gittyage-language";
+    const COPY = {
+      en: {
+        htmlLang: "en",
+        locale: "en",
+        documentTitle: "GitHub Account Age Checker",
+        heading: "GitHub Account Age Checker",
+        description: "Look up a GitHub user and see when the account was created.",
+        usernameLabel: "GitHub username",
+        usernamePlaceholder: "octocat",
+        check: "Check",
+        checking: "Checking...",
+        resultUsername: "Username",
+        resultCreatedAt: "Created at",
+        resultAge: "Account age",
+        hint: "Public GitHub data only. No token is used in this page.",
+        languageButtonLabel: "Switch to Chinese",
+        languageCode: "中",
+        enterUsername: "Enter a GitHub username.",
+        loading: "Loading...",
+        missingCreatedAt: "GitHub response did not include created_at.",
+        loaded: "Loaded successfully.",
+        unable: "Unable to reach GitHub.",
+        userNotFound: ({ username }) => `User not found: ${username}`,
+        rateLimited: ({ message, resetTime }) => {
+          const resetText = resetTime ? ` Try again after ${resetTime}.` : "";
+          return `${message || "GitHub rejected the request."}${resetText}`;
+        },
+        genericError: ({ message }) => message || "Unable to reach GitHub.",
+        age: ({ days, hours, minutes }) => `${days} days, ${hours} hours, ${minutes} minutes`,
+      },
+      zh: {
+        htmlLang: "zh-CN",
+        locale: "zh-CN",
+        documentTitle: "GitHub 账号年龄查询",
+        heading: "GitHub 账号年龄查询",
+        description: "输入 GitHub 用户名，查看账号创建时间。",
+        usernameLabel: "GitHub 用户名",
+        usernamePlaceholder: "octocat",
+        check: "查询",
+        checking: "查询中...",
+        resultUsername: "用户名",
+        resultCreatedAt: "创建时间",
+        resultAge: "账号年龄",
+        hint: "仅使用 GitHub 公开数据。本页面不会使用或保存令牌。",
+        languageButtonLabel: "切换到英文",
+        languageCode: "EN",
+        enterUsername: "请输入 GitHub 用户名。",
+        loading: "加载中...",
+        missingCreatedAt: "GitHub 响应中没有 created_at 字段。",
+        loaded: "加载成功。",
+        unable: "无法连接 GitHub。",
+        userNotFound: ({ username }) => `未找到用户：${username}`,
+        rateLimited: ({ message, resetTime }) => {
+          const resetText = resetTime ? ` 请在 ${resetTime} 后重试。` : "";
+          return `GitHub 拒绝了请求：${message || "可能是请求频率限制。"}${resetText}`;
+        },
+        genericError: ({ message }) => message || "无法连接 GitHub。",
+        age: ({ days, hours, minutes }) => `${days} 天 ${hours} 小时 ${minutes} 分钟`,
+      },
+    };
+
     const form = document.getElementById("lookup-form");
+    const pageTitle = document.getElementById("page-title");
+    const pageDescription = document.getElementById("page-description");
+    const languageButton = document.getElementById("language-button");
+    const languageCode = document.getElementById("language-code");
     const usernameInput = document.getElementById("username");
     const checkButton = document.getElementById("check-button");
     const result = document.getElementById("result");
+    const labelLogin = document.getElementById("label-login");
+    const labelCreatedAt = document.getElementById("label-created-at");
+    const labelAge = document.getElementById("label-age");
     const resultLogin = document.getElementById("result-login");
     const resultCreatedAt = document.getElementById("result-created-at");
     const resultAge = document.getElementById("result-age");
     const status = document.getElementById("status");
+    const hint = document.getElementById("hint");
+
+    let currentLanguage = getInitialLanguage();
+    let isBusy = false;
+    let lastCreatedAt = "";
+    let lastStatus = null;
+
+    function getCopy() {
+      return COPY[currentLanguage];
+    }
+
+    function getInitialLanguage() {
+      try {
+        const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+        if (storedLanguage in COPY) {
+          return storedLanguage;
+        }
+      } catch {
+        // Ignore storage failures; language detection still works.
+      }
+
+      return navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
+    }
+
+    function saveLanguage(language) {
+      try {
+        localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+      } catch {
+        // Persisting the language is optional.
+      }
+    }
 
     function setStatus(message, kind = "") {
       status.textContent = message;
       status.className = `status${kind ? ` ${kind}` : ""}`;
     }
 
-    function setBusy(isBusy) {
-      checkButton.disabled = isBusy;
-      usernameInput.disabled = isBusy;
-      checkButton.textContent = isBusy ? "Checking..." : "Check";
+    function setLocalizedStatus(key, kind = "", values = {}) {
+      lastStatus = { key, kind, values };
+      renderStatus();
+    }
+
+    function renderStatus() {
+      if (!lastStatus) {
+        setStatus("", "");
+        return;
+      }
+
+      const copy = getCopy();
+      const statusCopy = copy[lastStatus.key];
+      const message = typeof statusCopy === "function"
+        ? statusCopy(lastStatus.values)
+        : statusCopy;
+      setStatus(message, lastStatus.kind);
+    }
+
+    function setBusy(nextBusy) {
+      isBusy = nextBusy;
+      checkButton.disabled = nextBusy;
+      usernameInput.disabled = nextBusy;
+      checkButton.textContent = nextBusy ? getCopy().checking : getCopy().check;
     }
 
     function formatAge(createdAt) {
@@ -222,11 +400,11 @@
       const days = Math.floor(totalMinutes / 1440);
       const hours = Math.floor((totalMinutes % 1440) / 60);
       const minutes = totalMinutes % 60;
-      return `${days} days, ${hours} hours, ${minutes} minutes`;
+      return getCopy().age({ days, hours, minutes });
     }
 
     function formatCreatedAt(createdAt) {
-      return new Intl.DateTimeFormat(undefined, {
+      return new Intl.DateTimeFormat(getCopy().locale, {
         dateStyle: "medium",
         timeStyle: "medium",
         timeZone: "UTC",
@@ -244,10 +422,34 @@
       }
 
       const resetDate = new Date(resetSeconds * 1000);
-      return new Intl.DateTimeFormat(undefined, {
+      return new Intl.DateTimeFormat(getCopy().locale, {
         dateStyle: "medium",
         timeStyle: "medium",
       }).format(resetDate);
+    }
+
+    function applyLanguage() {
+      const copy = getCopy();
+      document.documentElement.lang = copy.htmlLang;
+      document.title = copy.documentTitle;
+      pageTitle.textContent = copy.heading;
+      pageDescription.textContent = copy.description;
+      document.querySelector("label[for='username']").textContent = copy.usernameLabel;
+      usernameInput.placeholder = copy.usernamePlaceholder;
+      checkButton.textContent = isBusy ? copy.checking : copy.check;
+      labelLogin.textContent = copy.resultUsername;
+      labelCreatedAt.textContent = copy.resultCreatedAt;
+      labelAge.textContent = copy.resultAge;
+      hint.textContent = copy.hint;
+      languageButton.title = copy.languageButtonLabel;
+      languageButton.setAttribute("aria-label", copy.languageButtonLabel);
+      languageCode.textContent = copy.languageCode;
+
+      if (lastCreatedAt) {
+        resultCreatedAt.textContent = formatCreatedAt(lastCreatedAt);
+        resultAge.textContent = formatAge(lastCreatedAt);
+      }
+      renderStatus();
     }
 
     async function fetchUser(username) {
@@ -284,44 +486,53 @@
       event.preventDefault();
       const username = usernameInput.value.trim();
       if (!username) {
-        setStatus("Enter a GitHub username.", "error");
+        setLocalizedStatus("enterUsername", "error");
         result.classList.add("hidden");
         return;
       }
 
       setBusy(true);
-      setStatus("Loading...", "");
+      setLocalizedStatus("loading");
       result.classList.remove("hidden");
 
       try {
         const user = await fetchUser(username);
         const createdAt = user.created_at;
         if (!createdAt) {
-          throw new Error("GitHub response did not include created_at.");
+          throw new Error(getCopy().missingCreatedAt);
         }
 
+        lastCreatedAt = createdAt;
         resultLogin.textContent = user.login || username;
         resultCreatedAt.textContent = formatCreatedAt(createdAt);
         resultAge.textContent = formatAge(createdAt);
-        setStatus("Loaded successfully.", "success");
+        setLocalizedStatus("loaded", "success");
       } catch (error) {
+        lastCreatedAt = "";
         resultLogin.textContent = "-";
         resultCreatedAt.textContent = "-";
         resultAge.textContent = "-";
 
         if (error.status === 404) {
-          setStatus(`User not found: ${username}`, "error");
+          setLocalizedStatus("userNotFound", "error", { username });
         } else if (error.status === 403 || error.status === 429) {
           const resetTime = formatResetTime(error.rateLimit?.reset);
-          const resetText = resetTime ? ` Try again after ${resetTime}.` : "";
-          setStatus(`${error.message}${resetText}`, "error");
+          setLocalizedStatus("rateLimited", "error", { message: error.message, resetTime });
         } else {
-          setStatus(error.message || "Unable to reach GitHub.", "error");
+          setLocalizedStatus("genericError", "error", { message: error.message });
         }
       } finally {
         setBusy(false);
       }
     });
+
+    languageButton.addEventListener("click", () => {
+      currentLanguage = currentLanguage === "en" ? "zh" : "en";
+      saveLanguage(currentLanguage);
+      applyLanguage();
+    });
+
+    applyLanguage();
   </script>
 </body>
 </html>
