@@ -24,15 +24,19 @@
     body {
       margin: 0;
       min-height: 100vh;
+      min-height: 100svh;
+      display: grid;
+      place-items: center;
       background: var(--bg);
       color: var(--text);
       font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     }
 
     main {
+      width: 100%;
       max-width: 760px;
       margin: 0 auto;
-      padding: 40px 20px 56px;
+      padding: 32px 20px;
     }
 
     h1 {
@@ -225,7 +229,7 @@
 
     @media (max-width: 520px) {
       main {
-        padding-top: 28px;
+        padding: 28px 16px;
       }
 
       h1 {
@@ -302,7 +306,7 @@
     const COPY = {
       en: {
         htmlLang: "en",
-        locale: "en",
+        locale: "en-US",
         documentTitle: "GitHub Account Age Checker",
         heading: "GitHub Account Age Checker",
         description: "Look up a GitHub user and see when the account was created.",
@@ -322,7 +326,8 @@
         loaded: "Loaded successfully.",
         unable: "Unable to reach GitHub.",
         userNotFound: ({ username }) => `User not found: ${username}`,
-        rateLimited: ({ message, resetTime }) => {
+        rateLimited: ({ message, resetHeader }) => {
+          const resetTime = formatResetTime(resetHeader);
           const resetText = resetTime ? ` Try again after ${resetTime}.` : "";
           return `${message || "GitHub rejected the request."}${resetText} If you are using a proxy or VPN, turn it off or switch networks and try again.`;
         },
@@ -354,7 +359,8 @@
         loaded: "加载成功。",
         unable: "无法连接 GitHub。",
         userNotFound: ({ username }) => `未找到用户：${username}`,
-        rateLimited: ({ message, resetTime }) => {
+        rateLimited: ({ message, resetHeader }) => {
+          const resetTime = formatResetTime(resetHeader);
           const resetText = resetTime ? ` 请在 ${resetTime} 后重试。` : "";
           return `GitHub 拒绝了请求：${message || "可能是请求频率限制。"}${resetText} 如果你正在使用代理或 VPN，请关闭代理或切换网络后再试。`;
         },
@@ -601,8 +607,10 @@
         if (error.status === 404) {
           setLocalizedStatus("userNotFound", "error", { username });
         } else if (error.status === 403 || error.status === 429) {
-          const resetTime = formatResetTime(error.rateLimit?.reset);
-          setLocalizedStatus("rateLimited", "error", { message: error.message, resetTime });
+          setLocalizedStatus("rateLimited", "error", {
+            message: error.message,
+            resetHeader: error.rateLimit?.reset,
+          });
         } else {
           setLocalizedStatus("genericError", "error", { message: error.message });
         }
