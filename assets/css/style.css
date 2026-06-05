@@ -220,6 +220,14 @@ dd {
   color: var(--muted);
 }
 
+.footnote {
+  margin-top: 14px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--muted);
+  text-align: center;
+}
+
 @media (max-width: 520px) {
   main {
     padding: 28px 16px;

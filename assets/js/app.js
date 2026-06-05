@@ -33,6 +33,7 @@ const COPY = {
     ageYears: ({ years }) => `about ${years} years`,
     showYearsLabel: "Show account age in years",
     showDaysLabel: "Show account age in days",
+    footnote: "",
   },
   zh: {
     htmlLang: "zh-CN",
@@ -66,6 +67,7 @@ const COPY = {
     ageYears: ({ years }) => `约 ${years} 年`,
     showYearsLabel: "以年显示账号年龄",
     showDaysLabel: "以天显示账号年龄",
+    footnote: "",
   },
 };
 
@@ -86,6 +88,7 @@ const resultAge = document.getElementById("result-age");
 const ageToggle = document.getElementById("age-toggle");
 const status = document.getElementById("status");
 const hint = document.getElementById("hint");
+const footnote = document.getElementById("footnote");
 
 let currentLanguage = getInitialLanguage();
 let isBusy = false;
@@ -208,6 +211,7 @@ function applyLanguage() {
   labelCreatedAt.textContent = copy.resultCreatedAt;
   labelAge.textContent = copy.resultAge;
   hint.textContent = copy.hint;
+  footnote.textContent = copy.footnote;
   languageButton.title = copy.languageButtonLabel;
   languageButton.setAttribute("aria-label", copy.languageButtonLabel);
   languageCode.textContent = copy.languageCode;
