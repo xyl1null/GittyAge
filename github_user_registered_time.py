@@ -36,6 +36,27 @@ def format_age(created_at: datetime, now: datetime) -> str:
     return f"{days} days, {hours} hours, {minutes} minutes"
 
 
+def format_rate_limit_reset(reset_header: str | None) -> str:
+    if not reset_header:
+        return ""
+
+    try:
+        reset_at = datetime.fromtimestamp(int(reset_header), timezone.utc)
+    except ValueError:
+        return ""
+
+    return reset_at.strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
+def read_http_error_message(exc: HTTPError) -> str:
+    try:
+        payload = json.loads(exc.read().decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return f"HTTP {exc.code}"
+
+    return payload.get("message") or f"HTTP {exc.code}"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Check when a GitHub user account was created."
@@ -54,8 +75,12 @@ def main() -> int:
         if exc.code == 404:
             print(f"user not found: {args.username}", file=sys.stderr)
             return 1
-        if exc.code == 403:
-            print("request rejected by GitHub (rate limit or auth issue)", file=sys.stderr)
+        if exc.code in (403, 429):
+            message = read_http_error_message(exc)
+            reset_at = format_rate_limit_reset(exc.headers.get("X-RateLimit-Reset"))
+            if reset_at:
+                message = f"{message} Try again after {reset_at}."
+            print(message, file=sys.stderr)
             return 1
         print(f"GitHub API error: HTTP {exc.code}", file=sys.stderr)
         return 1

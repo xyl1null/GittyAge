@@ -233,6 +233,23 @@
       }).format(new Date(createdAt));
     }
 
+    function formatResetTime(resetHeader) {
+      if (!resetHeader) {
+        return "";
+      }
+
+      const resetSeconds = Number(resetHeader);
+      if (!Number.isFinite(resetSeconds)) {
+        return "";
+      }
+
+      const resetDate = new Date(resetSeconds * 1000);
+      return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "medium",
+      }).format(resetDate);
+    }
+
     async function fetchUser(username) {
       const response = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, {
         headers: {
@@ -252,6 +269,11 @@
         const error = new Error(payload.message || `HTTP ${response.status}`);
         error.status = response.status;
         error.payload = payload;
+        error.rateLimit = {
+          limit: response.headers.get("X-RateLimit-Limit"),
+          remaining: response.headers.get("X-RateLimit-Remaining"),
+          reset: response.headers.get("X-RateLimit-Reset"),
+        };
         throw error;
       }
 
@@ -290,7 +312,9 @@
         if (error.status === 404) {
           setStatus(`User not found: ${username}`, "error");
         } else if (error.status === 403 || error.status === 429) {
-          setStatus("GitHub rejected the request, likely due to rate limiting.", "error");
+          const resetTime = formatResetTime(error.rateLimit?.reset);
+          const resetText = resetTime ? ` Try again after ${resetTime}.` : "";
+          setStatus(`${error.message}${resetText}`, "error");
         } else {
           setStatus(error.message || "Unable to reach GitHub.", "error");
         }
