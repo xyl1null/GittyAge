@@ -34,6 +34,7 @@ const COPY = {
     ageYears: ({ years }) => `about ${years} years`,
     showYearsLabel: "Show account age in years",
     showDaysLabel: "Show account age in days",
+    timeZoneLabel: "China Standard Time",
     footnote: "",
   },
   zh: {
@@ -68,6 +69,7 @@ const COPY = {
     ageYears: ({ years }) => `约 ${years} 年`,
     showYearsLabel: "以年显示账号年龄",
     showDaysLabel: "以天显示账号年龄",
+    timeZoneLabel: "中国标准时间",
     footnote: "",
   },
 };
@@ -180,7 +182,7 @@ function formatCreatedAt(createdAt) {
     timeStyle: "medium",
     timeZone: DISPLAY_TIME_ZONE,
   }).format(new Date(createdAt));
-  return `${formattedTime} (${DISPLAY_TIME_ZONE})`;
+  return `${formattedTime} (${getCopy().timeZoneLabel})`;
 }
 
 function formatResetTime(resetHeader) {
