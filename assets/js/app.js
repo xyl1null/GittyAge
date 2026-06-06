@@ -1,5 +1,6 @@
 const API_VERSION = "2022-11-28";
 const LANGUAGE_STORAGE_KEY = "gittyage-language";
+const DISPLAY_TIME_ZONE = "Asia/Shanghai";
 const COPY = {
   en: {
     htmlLang: "en",
@@ -174,11 +175,12 @@ function formatAgeYears(createdAt) {
 }
 
 function formatCreatedAt(createdAt) {
-  return new Intl.DateTimeFormat(getCopy().locale, {
+  const formattedTime = new Intl.DateTimeFormat(getCopy().locale, {
     dateStyle: "medium",
     timeStyle: "medium",
-    timeZone: "UTC",
+    timeZone: DISPLAY_TIME_ZONE,
   }).format(new Date(createdAt));
+  return `${formattedTime} (${DISPLAY_TIME_ZONE})`;
 }
 
 function formatResetTime(resetHeader) {
